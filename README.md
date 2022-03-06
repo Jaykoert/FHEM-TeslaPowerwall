@@ -2,8 +2,7 @@
 
 # Disclaimer
 This FHEM modul is forked from https://git.cooltux.net/FHEM/mod-TeslaPowerwall2AC
-thanks to CoolTux for all the effort. This is just for testing and bugfixing. 
-New features will be 
+thanks to CoolTux for all the effort. This is just for testing and bugfixing.
 
 ## Community support
 The FHEM Forum is available [here](https://forum.fhem.de/) for general support.
