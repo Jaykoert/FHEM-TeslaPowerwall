@@ -1,0 +1,73 @@
+{
+  "site":{
+    "last_communication_time":"2021-07-04T12:52:47.068381536+02:00",
+    "instant_power":9.5,
+    "instant_reactive_power":590.8899955749512,
+    "instant_apparent_power":590.9663584930752,         <-- 6
+    "frequency":50,
+    "energy_exported":2537096.687811297,
+    "energy_imported":1670516.8678112975,
+    "instant_average_voltage":234.35999552408853,
+    "instant_total_current":0,
+    "i_a_current":0,
+    "i_b_current":0,
+    "i_c_current":0,
+    "last_phase_voltage_communication_time":"0001-01-01T00:00:00Z",
+    "last_phase_power_communication_time":"0001-01-01T00:00:00Z",
+    "timeout":1500000000,
+    "num_meters_aggregated":1
+  },
+  "battery":{
+    "last_communication_time":"2021-07-04T12:52:47.090072354+02:00",
+    "instant_power":-2680,
+    "instant_reactive_power":30,
+    "instant_apparent_power":2680.1679051880315,      <-- 31
+    "frequency":50.028999999999996,
+    "energy_exported":1935720,
+    "energy_imported":2272460,
+    "instant_average_voltage":230.10000000000002,
+    "instant_total_current":57.5,
+    "i_a_current":0,
+    "i_b_current":0,
+    "i_c_current":0,
+    "last_phase_voltage_communication_time":"0001-01-01T00:00:00Z",
+    "last_phase_power_communication_time":"0001-01-01T00:00:00Z",
+    "timeout":1500000000,
+    "num_meters_aggregated":1
+  },
+  "load":{
+    "last_communication_time":"2021-07-04T12:52:47.068381536+02:00",
+    "instant_power":824.2258586819091,
+    "instant_reactive_power":377.09568849222774,
+    "instant_apparent_power":906.3936365615978,     <-- 56
+    "frequency":50,
+    "energy_exported":0,
+    "energy_imported":5826143.719417314,
+    "instant_average_voltage":234.35999552408853,
+    "instant_total_current":3.5169221472236787,
+    "i_a_current":0,
+    "i_b_current":0,
+    "i_c_current":0,
+    "last_phase_voltage_communication_time":"0001-01-01T00:00:00Z",
+    "last_phase_power_communication_time":"0001-01-01T00:00:00Z",
+    "timeout":1500000000
+  },
+  "solar":{
+    "last_communication_time":"2021-07-04T12:52:47.089449134+02:00",
+    "instant_power":3474,
+    "instant_reactive_power":-229,
+    "instant_apparent_power":3481.539458343105,     <-- 80
+    "frequency":0,
+    "energy_exported":7052761.546560897,
+    "energy_imported":23298.00714358326,
+    "instant_average_voltage":405.5250555761012,
+    "instant_total_current":14.9015,
+    "i_a_current":0,
+    "i_b_current":0,
+    "i_c_current":0,
+    "last_phase_voltage_communication_time":"0001-01-01T00:00:00Z",
+    "last_phase_power_communication_time":"0001-01-01T00:00:00Z",
+    "timeout":1500000000,
+    "num_meters_aggregated":1
+  }
+}
