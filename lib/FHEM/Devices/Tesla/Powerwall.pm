@@ -176,27 +176,7 @@ sub Define {
     ::Log3($name, 3,
 qq(TeslaPowerwall2AC ($name) - defined TeslaPowerwall2AC Device with Host $host and Interval $hash->{INTERVAL}));
 
-    ### create password object to handle pass keystore
-    $hash->{helper}->{passObj}  = FHEM::Core::Authentication::Passwords->new($hash->{TYPE});
-    
-    
-    ## kann nach einiger Zeit gelöscht werden genauso wie auch ReadPassword und DeletePassword
-    if ( defined( ReadPassword( $hash, $name ) ) ) {
-        my ($passResp,$passErr);
-        ($passResp,$passErr) = $hash->{helper}->{passObj}->setStorePassword($name,ReadPassword( $hash, $name ));
-        
-        ::Log3($name, 1,
-qq(TeslaPowerwall2AC ($name) - error while saving the password - $passErr))
-          if ( !defined($passResp)
-           and defined($passErr) );
-
-        ::Log3($name, 1,
-qq(TeslaPowerwall2AC ($name) - password successfully saved))
-          if ( defined($passResp)
-           and !defined($passErr) );
-           
-        DeletePassword($hash);
-    }
+    updatePassword($hash, $name);
 
     return;
 }
@@ -381,7 +361,7 @@ sub Set {
                                                    || scalar(keys %{$hArg}) != 1 );
         my ($passResp,$passErr);
         ($passResp,$passErr) = $hash->{helper}->{passObj}->setStorePassword($name,$hArg->{'pass'});
-        
+
         return qq{error while saving the password - $passErr}
           if ( !defined($passResp)
            and defined($passErr) );
@@ -389,6 +369,9 @@ sub Set {
         return Timer_GetData($hash)
           if ( defined($passResp)
            and !defined($passErr) );
+    }
+    elsif ( lc $cmd eq 'reload' ) {
+        reload($hash, $name);
     }
     elsif ( lc $cmd eq 'removepassword' ) {
         return "usage: $cmd" if ( scalar( @{$aArg} ) != 0 );
@@ -408,7 +391,7 @@ sub Set {
 
         my $list = ( exists($hash->{helper}->{passObj})
             && defined($hash->{helper}->{passObj}->getReadPassword($name))
-          ? 'removePassword:noArg '
+          ? 'removePassword:noArg reload:noArg'
           : 'setPassword ');
 
         $list .= 'powerwalls:run,stop'
@@ -472,35 +455,44 @@ sub Timer_GetData {
 sub Write {
     my $hash = shift;
     my $name = $hash->{NAME};
+    my $path = pop( @{ $hash->{actionQueue} });
 
-    my ( $uri, $method, $header, $data, $path ) =
-      CreateUri( $hash, pop( @{ $hash->{actionQueue} } ) );
+    # keine Ahnung warum das hier null ist, der Stacktrace sieht so aus:
+    #2023.05.26 08:37:03.162 1: PERL WARNING: Use of uninitialized value in concatenation (.) or string at lib/FHEM/Devices/Tesla/Powerwall.pm line 878.
+    #2023.05.26 08:37:03.162 1:     main::HandleTimeout                 called by fhem.pl (705)
+    #2023.05.26 08:37:03.161 1:     FHEM::Devices::Tesla::Powerwall::Write called by fhem.pl (3501)
+    #2023.05.26 08:37:03.161 1:     FHEM::Devices::Tesla::Powerwall::CreateUri called by lib/FHEM/Devices/Tesla/Powerwall.pm (460)
+    #irgendwo ein Timeout vergessen oder es wird nochmal die Write-Methode aufgerufen?
+    if (defined($path)) {
+        my ( $uri, $method, $header, $data ) =
+            CreateUri( $hash,  $path );
 
-    ::readingsSingleUpdate(
-        $hash,
-        'state',
-        'fetch data - '
-          . scalar( @{ $hash->{actionQueue} } )
-          . ' entries in the Queue',
-        1
-    );
+        ::readingsSingleUpdate(
+            $hash,
+            'state',
+            'fetch data - '
+                . scalar( @{ $hash->{actionQueue} } )
+                . ' entries in the Queue',
+            1
+        );
 
-    ::HttpUtils_NonblockingGet(
-        {
-            url       => 'https://' . $uri,
-            timeout   => 5,
-            method    => $method,
-            data      => $data,
-            header    => $header,
-            hash      => $hash,
-            setCmd    => $path,
-            sslargs => { SSL_hostname => 0, verify_hostname => 0, SSL_verify_mode => 0 },
-            doTrigger => 1,
-            callback  => \&ErrorHandling,
-        }
-    );
+        ::HttpUtils_NonblockingGet(
+            {
+                url       => 'https://' . $uri,
+                timeout   => 5,
+                method    => $method,
+                data      => $data,
+                header    => $header,
+                hash      => $hash,
+                setCmd    => $path,
+                sslargs => { SSL_hostname => 0, verify_hostname => 0, SSL_verify_mode => 0 },
+                doTrigger => 1,
+                callback  => \&ErrorHandling,
+            }
+        );
 
-    ::Log3($name, 4, qq(TeslaPowerwall2AC ($name) - Send with URI: https://$uri));
+        ::Log3($name, 4, qq(TeslaPowerwall2AC ($name) - Send with URI: https://$uri));
+    }
 }
 
 sub ErrorHandling {
@@ -892,6 +884,9 @@ sub CreateUri {
     my $host        = $hash->{HOST};
     my $header      = ( defined($hash->{TOKEN}) ? 'Cookie: AuthCookie=' . $hash->{TOKEN} : undef );
     my $method      = 'GET';
+
+    ::Log3($name, 4, qq(TeslaPowerwall2AC ($name) - Path $path $paths{$path}));
+
     my $uri         = ( $path ne 'login' ? $host . '/api/' . $paths{$path} : $host . '/api/login/Basic' );
     my $data;
 
@@ -912,7 +907,48 @@ sub CreateUri {
         $uri        = $host . '/api/' . $cmdPaths{$path};
     }
 
-    return ( $uri, $method, $header, $data, $path );
+    return ( $uri, $method, $header, $data );
+}
+
+sub reload() {
+    my $hash = shift;
+    my $name = shift;
+
+    updatePassword($hash, $name);
+
+    ::RemoveInternalTimer($hash);
+    $hash->{INTERVAL} = $attrVal;
+    ::Log3($name, 3,
+        qq(TeslaPowerwall2AC ($name) - set interval to $attrVal));
+    Timer_GetData($hash);
+
+
+}
+
+sub updatePassword() {
+    my $hash = shift;
+    my $name = shift;
+    ### create password object to handle pass keystore
+    $hash->{helper}->{passObj}  = FHEM::Core::Authentication::Passwords->new($hash->{TYPE});
+
+
+    ## kann nach einiger Zeit gelöscht werden genauso wie auch ReadPassword und DeletePassword
+    if ( defined( ReadPassword( $hash, $name ) ) ) {
+        my ($passResp,$passErr);
+        ($passResp,$passErr) = $hash->{helper}->{passObj}->setStorePassword($name,ReadPassword( $hash, $name ));
+
+        ::Log3($name, 1,
+            qq(TeslaPowerwall2AC ($name) - error while saving the password - $passErr))
+            if ( !defined($passResp)
+                and defined($passErr) );
+
+        ::Log3($name, 1,
+            qq(TeslaPowerwall2AC ($name) - password successfully saved))
+            if ( defined($passResp)
+                and !defined($passErr) );
+
+        DeletePassword($hash);
+    }
 }
 
 ### Kann nach einiger Zeit entfernt werden
